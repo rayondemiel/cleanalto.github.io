@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ZIP File Processor</title>
+    <title>ZIP File ALTO Cleaner</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
         /* Previous styles remain the same */
@@ -178,6 +178,9 @@
         <p id="status">0%</p>
     </div>
 
+    <button id="processButton" disabled>Process ZIP File</button>
+    <button id="downloadButton" disabled>Download Processed ZIP</button>
+
     <div id="fileStats" class="file-stats">
         <h4>Processing Statistics:</h4>
         <table id="statsTable">
@@ -192,9 +195,6 @@
             <tbody></tbody>
         </table>
     </div>
-
-    <button id="processButton" disabled>Process ZIP File</button>
-    <button id="downloadButton" disabled>Download Processed ZIP</button>
 
     <script>
         const dropZone = document.getElementById('dropZone');
