@@ -6,6 +6,7 @@
     <title>ZIP File Processor</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
+        /* Previous styles remain the same */
         body {
             font-family: system-ui, -apple-system, sans-serif;
             max-width: 800px;
@@ -49,7 +50,7 @@
             transition: width 0.3s ease;
         }
         button {
-            background-color: #4CAF50;
+            background-color: #2c89b4;
             color: white;
             padding: 10px 20px;
             border: none;
@@ -58,15 +59,69 @@
             font-size: 16px;
             margin: 10px;
         }
+        #downloadButton {
+            background-color: #4CAF50;
+        }
         button:disabled {
             background-color: #cccccc;
             cursor: not-allowed;
+        }
+        .modes-container {
+            text-align: left;
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+        }
+        .mode-option {
+            margin: 10px 0;
+        }
+        .mode-option label {
+            margin-left: 8px;
+            cursor: pointer;
+        }
+        .error-message {
+            color: #ff0000;
+            margin: 10px 0;
+            display: none;
+        }
+        .mode-group {
+            border-left: 3px solid #4CAF50;
+            padding-left: 15px;
+            margin: 20px 0;
+        }
+        .mode-group h4 {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+        .file-stats {
+            margin: 10px 0;
+            padding: 10px;
+            background-color: #f5f5f5;
+            border-radius: 4px;
+            display: none;
+        }
+        .file-stats table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .file-stats th, .file-stats td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        .compression-info {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+        .size-reduction {
+            color: #2196F3;
         }
     </style>
 </head>
 <body>
     <h1>ZIP File Processor</h1>
-    <p>Upload a ZIP file containing XML files to clean the filenames within them.</p>
+    <p>Upload a ZIP file containing XML files and select processing modes.</p>
     
     <div class="container">
         <div id="dropZone">
@@ -77,12 +132,65 @@
         </div>
     </div>
 
+    <div class="modes-container">
+        <h3>Select Processing Modes:</h3>
+        
+        <div class="mode-group">
+            <h4>Structure Operations:</h4>
+            <div class="mode-option">
+                <input type="checkbox" id="flattenStructure" name="processingMode" value="flattenStructure">
+                <label for="flattenStructure">Move all XML files to root level</label>
+            </div>
+            <div class="mode-option">
+                <input type="checkbox" id="compressXML" name="processingMode" value="compressXML">
+                <label for="compressXML">Compress XML (remove whitespace and format)</label>
+            </div>
+        </div>
+
+        <div class="mode-group">
+            <h4>Content Operations:</h4>
+            <div class="mode-option">
+                <input type="checkbox" id="cleanFilenames" name="processingMode" value="cleanFilenames">
+                <label for="cleanFilenames">Clean filenames (remove directory paths)</label>
+            </div>
+            <div class="mode-option">
+                <input type="checkbox" id="removeGlyphs" name="processingMode" value="removeGlyphs">
+                <label for="removeGlyphs">Remove &lt;Glyph&gt; elements and children</label>
+            </div>
+            <div class="mode-option">
+                <input type="checkbox" id="removeStyles" name="processingMode" value="removeStyles">
+                <label for="removeStyles">Remove style-related attributes</label>
+            </div>
+            <div class="mode-option">
+                <input type="checkbox" id="cleanWhitespace" name="processingMode" value="cleanWhitespace">
+                <label for="cleanWhitespace">Clean whitespace in text content</label>
+            </div>
+        </div>
+        
+        <div id="modeError" class="error-message">Please select at least one processing mode.</div>
+    </div>
+
     <div id="progress">
         <h3>Processing Files...</h3>
         <div class="progress-bar">
             <div class="progress-fill"></div>
         </div>
         <p id="status">0%</p>
+    </div>
+
+    <div id="fileStats" class="file-stats">
+        <h4>Processing Statistics:</h4>
+        <table id="statsTable">
+            <thead>
+                <tr>
+                    <th>File</th>
+                    <th>Original Size</th>
+                    <th>Processed Size</th>
+                    <th>Reduction</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
     </div>
 
     <button id="processButton" disabled>Process ZIP File</button>
@@ -96,11 +204,25 @@
         const progressBar = document.querySelector('.progress-fill');
         const progressStatus = document.getElementById('status');
         const progressDiv = document.getElementById('progress');
+        const modeError = document.getElementById('modeError');
         
         let selectedFile = null;
         let processedZip = null;
 
-        // Handle drag and drop events
+        // Handle checkbox changes
+        document.querySelectorAll('input[name="processingMode"]').forEach(checkbox => {
+            checkbox.addEventListener('change', validateForm);
+        });
+
+        function validateForm() {
+            const atLeastOneChecked = Array.from(document.querySelectorAll('input[name="processingMode"]'))
+                .some(checkbox => checkbox.checked);
+            
+            processButton.disabled = !selectedFile || !atLeastOneChecked;
+            modeError.style.display = atLeastOneChecked ? 'none' : 'block';
+        }
+
+        // Drag and drop handlers remain the same
         dropZone.addEventListener('dragover', (e) => {
             e.preventDefault();
             dropZone.classList.add('dragover');
@@ -132,47 +254,170 @@
 
         function handleFileSelection(file) {
             selectedFile = file;
-            processButton.disabled = false;
+            validateForm();
             downloadButton.disabled = true;
+        }
+
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function compressXML(xmlString) {
+            // Remove comments
+            xmlString = xmlString.replace(/<!--[\s\S]*?-->/g, '');
+            
+            // Remove white space between tags while preserving space in content
+            xmlString = xmlString.replace(/>\s+</g, '><');
+            
+            // Remove leading and trailing whitespace from lines
+            xmlString = xmlString.replace(/^\s+|\s+$/gm, '');
+            
+            // Remove empty lines
+            xmlString = xmlString.replace(/(\r\n|\n|\r)/gm, '');
+            
+            return xmlString;
+        }
+        
+        function processXMLContent(content, modes) {
+            let processedContent = content;
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString(processedContent, 'text/xml');
+
+            if (modes.includes('cleanFilenames')) {
+                const fileNameElements = xmlDoc.getElementsByTagName('fileName');
+                for (const elem of fileNameElements) {
+                    const path = elem.textContent;
+                    elem.textContent = path.split('/').pop();
+                }
+            }
+
+            if (modes.includes('removeGlyphs')) {
+                const glyphs = xmlDoc.getElementsByTagName('Glyph');
+                while (glyphs.length > 0) {
+                    glyphs[0].parentNode.removeChild(glyphs[0]);
+                }
+            }
+
+            if (modes.includes('removeStyles')) {
+                const elements = xmlDoc.getElementsByTagName('*');
+                const styleAttributes = ['STYLE', 'COLOR', 'FONTSIZE', 'FONTSTYLE'];
+                for (const elem of elements) {
+                    styleAttributes.forEach(attr => {
+                        elem.removeAttribute(attr);
+                    });
+                }
+            }
+
+            if (modes.includes('cleanWhitespace')) {
+                const textNodes = xmlDoc.getElementsByTagName('String');
+                for (const node of textNodes) {
+                    if (node.hasAttribute('CONTENT')) {
+                        const content = node.getAttribute('CONTENT');
+                        node.setAttribute('CONTENT', content.trim().replace(/\s+/g, ' '));
+                    }
+                }
+            }
+
+            const serializer = new XMLSerializer();
+            processedContent = serializer.serializeToString(xmlDoc);
+
+            if (modes.includes('compressXML')) {
+                processedContent = compressXML(processedContent);
+            }
+
+            return processedContent;
+        }
+
+        function getUniqueFilename(existingFiles, originalName) {
+            const baseName = originalName.split('/').pop();
+            if (!existingFiles.has(baseName)) {
+                existingFiles.add(baseName);
+                return baseName;
+            }
+            
+            const [name, ext] = baseName.split('.');
+            let counter = 1;
+            let newName;
+            do {
+                newName = `${name}_${counter}.${ext}`;
+                counter++;
+            } while (existingFiles.has(newName));
+            
+            existingFiles.add(newName);
+            return newName;
         }
 
         processButton.addEventListener('click', async () => {
             if (!selectedFile) return;
 
+            const selectedModes = Array.from(document.querySelectorAll('input[name="processingMode"]:checked'))
+                .map(checkbox => checkbox.value);
+
+            if (selectedModes.length === 0) {
+                modeError.style.display = 'block';
+                return;
+            }
+
             progressDiv.style.display = 'block';
+            const fileStats = document.getElementById('fileStats');
+            fileStats.style.display = 'block';
+            const statsTable = document.getElementById('statsTable').getElementsByTagName('tbody')[0];
+            statsTable.innerHTML = '';
             processButton.disabled = true;
             
             try {
                 const zip = new JSZip();
                 const loadedZip = await zip.loadAsync(selectedFile);
                 
-                const xmlFiles = Object.keys(loadedZip.files).filter(name => name.endsWith('.xml'));
+                const xmlFiles = Object.keys(loadedZip.files)
+                    .filter(name => name.toLowerCase().endsWith('.xml') && !loadedZip.files[name].dir);
+                
                 let processed = 0;
+                const existingFiles = new Set();
 
                 for (const fileName of xmlFiles) {
                     const content = await loadedZip.file(fileName).async('text');
-                    const parser = new DOMParser();
-                    const xmlDoc = parser.parseFromString(content, 'text/xml');
+                    const originalSize = new Blob([content]).size;
                     
-                    // Find and clean fileName elements
-                    const fileNameElements = xmlDoc.getElementsByTagName('fileName');
-                    for (const elem of fileNameElements) {
-                        const path = elem.textContent;
-                        elem.textContent = path.split('/').pop();
-                    }
+                    const processedContent = processXMLContent(content, selectedModes);
+                    const processedSize = new Blob([processedContent]).size;
+                    
+                    // Calculate reduction percentage
+                    const reduction = ((originalSize - processedSize) / originalSize * 100).toFixed(1);
+                    
+                    // Add statistics row
+                    const row = statsTable.insertRow();
+                    row.insertCell(0).textContent = fileName.split('/').pop();
+                    row.insertCell(1).textContent = formatBytes(originalSize);
+                    row.insertCell(2).textContent = formatBytes(processedSize);
+                    row.insertCell(3).textContent = `${reduction}%`;
 
-                    // Convert back to string
-                    const serializer = new XMLSerializer();
-                    const cleanedContent = serializer.serializeToString(xmlDoc);
+                    // Determine output filename
+                    let outputName = fileName;
+                    if (selectedModes.includes('flattenStructure')) {
+                        outputName = getUniqueFilename(existingFiles, fileName);
+                    }
                     
-                    // Add to new zip
-                    zip.file(fileName, cleanedContent);
+                    zip.file(outputName, processedContent);
                     
-                    // Update progress
                     processed++;
                     const progress = Math.round((processed / xmlFiles.length) * 100);
                     progressBar.style.width = `${progress}%`;
                     progressStatus.textContent = `${progress}%`;
+                }
+
+                // Copy non-XML files if not flattening
+                if (!selectedModes.includes('flattenStructure')) {
+                    for (const fileName in loadedZip.files) {
+                        if (!fileName.toLowerCase().endsWith('.xml') && !loadedZip.files[fileName].dir) {
+                            const content = await loadedZip.file(fileName).async('blob');
+                            zip.file(fileName, content);
+                        }
+                    }
                 }
 
                 processedZip = await zip.generateAsync({type: 'blob'});
