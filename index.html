@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZIP File Processor</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .container {
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            margin: 20px 0;
+        }
+        #dropZone {
+            min-height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+        #dropZone.dragover {
+            background-color: #e9ecef;
+            border-color: #666;
+        }
+        #progress {
+            display: none;
+            margin: 20px 0;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background-color: #f0f0f0;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background-color: #4CAF50;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <h1>ZIP File Processor</h1>
+    <p>Upload a ZIP file containing XML files to clean the filenames within them.</p>
+    
+    <div class="container">
+        <div id="dropZone">
+            <div>
+                <p>Drag and drop a ZIP file here<br>or click to select</p>
+                <input type="file" id="fileInput" accept=".zip" style="display: none">
+            </div>
+        </div>
+    </div>
+
+    <div id="progress">
+        <h3>Processing Files...</h3>
+        <div class="progress-bar">
+            <div class="progress-fill"></div>
+        </div>
+        <p id="status">0%</p>
+    </div>
+
+    <button id="processButton" disabled>Process ZIP File</button>
+    <button id="downloadButton" disabled>Download Processed ZIP</button>
+
+    <script>
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const processButton = document.getElementById('processButton');
+        const downloadButton = document.getElementById('downloadButton');
+        const progressBar = document.querySelector('.progress-fill');
+        const progressStatus = document.getElementById('status');
+        const progressDiv = document.getElementById('progress');
+        
+        let selectedFile = null;
+        let processedZip = null;
+
+        // Handle drag and drop events
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            if (file && file.type === 'application/zip') {
+                handleFileSelection(file);
+            }
+        });
+
+        dropZone.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                handleFileSelection(file);
+            }
+        });
+
+        function handleFileSelection(file) {
+            selectedFile = file;
+            processButton.disabled = false;
+            downloadButton.disabled = true;
+        }
+
+        processButton.addEventListener('click', async () => {
+            if (!selectedFile) return;
+
+            progressDiv.style.display = 'block';
+            processButton.disabled = true;
+            
+            try {
+                const zip = new JSZip();
+                const loadedZip = await zip.loadAsync(selectedFile);
+                
+                const xmlFiles = Object.keys(loadedZip.files).filter(name => name.endsWith('.xml'));
+                let processed = 0;
+
+                for (const fileName of xmlFiles) {
+                    const content = await loadedZip.file(fileName).async('text');
+                    const parser = new DOMParser();
+                    const xmlDoc = parser.parseFromString(content, 'text/xml');
+                    
+                    // Find and clean fileName elements
+                    const fileNameElements = xmlDoc.getElementsByTagName('fileName');
+                    for (const elem of fileNameElements) {
+                        const path = elem.textContent;
+                        elem.textContent = path.split('/').pop();
+                    }
+
+                    // Convert back to string
+                    const serializer = new XMLSerializer();
+                    const cleanedContent = serializer.serializeToString(xmlDoc);
+                    
+                    // Add to new zip
+                    zip.file(fileName, cleanedContent);
+                    
+                    // Update progress
+                    processed++;
+                    const progress = Math.round((processed / xmlFiles.length) * 100);
+                    progressBar.style.width = `${progress}%`;
+                    progressStatus.textContent = `${progress}%`;
+                }
+
+                processedZip = await zip.generateAsync({type: 'blob'});
+                downloadButton.disabled = false;
+                progressStatus.textContent = 'Processing complete!';
+
+            } catch (error) {
+                console.error('Error processing ZIP:', error);
+                progressStatus.textContent = 'Error processing file. Please try again.';
+            }
+        });
+
+        downloadButton.addEventListener('click', () => {
+            if (processedZip) {
+                const url = URL.createObjectURL(processedZip);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'processed_' + selectedFile.name;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }
+        });
+    </script>
+</body>
+</html>
