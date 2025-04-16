@@ -3,125 +3,267 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ZIP File ALTO Cleaner</title>
+    <title>ALTO Archives Cleaner - XML-ALTO Optimization</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Source+Sans+3:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'serif': ['"Playfair Display"', 'serif'],
+                        'sans': ['"Source Sans 3"', 'sans-serif'],
+                    },
+                    colors: {
+                        'parchment': '#f5f2e8',
+                        'ink': '#2c343b',
+                        'maroon': '#85344d',
+                        'oxford': '#002147', 
+                        'cambridge': '#a3c1ad',
+                        'gold': '#d4af37',
+                    },
+                    backgroundImage: {
+                        'paper-texture': "url('data:image/svg+xml,%3Csvg width=\"100\" height=\"100\" viewBox=\"0 0 100 100\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cfilter id=\"noise\"%3E%3CfeTurbulence type=\"fractalNoise\" baseFrequency=\".7\" numOctaves=\"2\" stitchTiles=\"stitch\"/%3E%3CfeColorMatrix type=\"saturate\" values=\"0\"/%3E%3C/filter%3E%3Crect width=\"100%\" height=\"100%\" filter=\"url(%23noise)\" opacity=\"0.06\"/%3E%3C/svg%3E')",
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f5f2e8;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #85344d;
+            border-radius: 5px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #70293f;
+        }
+        
+        /* Checkbox styling */
+        input[type="checkbox"] {
+            appearance: none;
+            width: 1.25rem;
+            height: 1.25rem;
+            border: 2px solid #85344d;
+            border-radius: 0.25rem;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        input[type="checkbox"]:checked {
+            background-color: #85344d;
+        }
+        
+        input[type="checkbox"]:checked::after {
+            content: "✓";
+            color: white;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 0.75rem;
+        }
+        
+        /* Animated progress bar */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        .pulse-animation {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+    </style>
 </head>
-<body class="bg-gray-50 min-h-screen">
-    <div class="container mx-auto px-4 py-8 max-w-3xl">
+<body class="bg-parchment bg-paper-texture min-h-screen font-sans text-ink">
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
         <header class="text-center mb-8">
-            <h1 class="text-3xl font-bold text-gray-800 mb-2">ZIP File ALTO Cleaner</h1>
-            <p class="text-gray-600">Upload a ZIP file containing XML files and select processing modes to clean up.</p>
+            <div class="mb-2 flex justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-maroon" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd" />
+                </svg>
+            </div>
+            <h1 class="text-4xl font-serif font-bold text-oxford mb-2">ALTO Archives Cleaner</h1>
+            <p class="text-xl italic font-serif text-maroon">XML-ALTO Optimization</p>
+            <div class="w-24 h-1 bg-gold mx-auto my-4"></div>
+            <p class="text-gray-700 max-w-2xl mx-auto">Transform and optimize your XML-ALTO archive (ZIP) files with precision. This tool preserves archive integrity while reducing technical overhead.</p>
         </header>
         
-        <div class="bg-white rounded-lg shadow-md overflow-hidden mb-8">
-            <div id="dropZone" class="border-2 border-dashed border-gray-300 rounded-lg p-8 transition-colors duration-200 cursor-pointer">
-                <div id="dropZoneDefault" class="flex flex-col items-center justify-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-blue-500 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                    </svg>
-                    <p class="text-gray-600 text-center">
-                        Drag and drop a ZIP file here<br>or click to select
-                    </p>
-                    <input type="file" id="fileInput" accept=".zip" class="hidden">
+        <div class="grid gap-8 lg:grid-cols-2">
+            <div class="bg-white rounded-lg shadow-lg overflow-hidden border-t-4 border-oxford transition-all duration-300 hover:shadow-xl">
+                <div class="p-6">
+                    <h2 class="font-serif text-2xl text-oxford mb-4 flex items-center">
+                        <i class="fas fa-file-upload mr-3 text-maroon"></i>
+                        Document Upload
+                    </h2>
+                    
+                    <div id="dropZone" class="border-2 border-dashed border-gray-300 rounded-lg p-8 transition-all duration-300 cursor-pointer hover:border-maroon hover:bg-gray-50">
+                        <div id="dropZoneDefault" class="flex flex-col items-center justify-center">
+                            <div class="w-20 h-20 mb-4 bg-oxford/10 rounded-full flex items-center justify-center">
+                                <i class="fas fa-cloud-upload-alt text-3xl text-oxford"></i>
+                            </div>
+                            <p class="text-gray-600 text-center mb-2">
+                                Drag and drop a ZIP file here<br>or click to select
+                            </p>
+                            <p class="text-xs text-gray-500 italic">
+                                (.zip archives containing ALTO XML files)
+                            </p>
+                            <input type="file" id="fileInput" accept=".zip" class="hidden">
+                        </div>
+                        <div id="dropZoneFile" class="hidden">
+                            <div class="flex items-center justify-center">
+                                <div class="w-12 h-12 bg-oxford/10 rounded-full flex items-center justify-center mr-4">
+                                    <i class="fas fa-file-archive text-xl text-oxford"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <p id="selectedFileName" class="font-medium text-oxford break-all mb-1"></p>
+                                    <p class="text-xs text-gray-500">Ready for processing</p>
+                                </div>
+                                <button id="removeFileButton" class="ml-3 bg-maroon text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-maroon/80 transition-colors duration-200">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div id="dropZoneFile" class="hidden">
-                    <div class="flex items-center justify-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-blue-500 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                        <p id="selectedFileName" class="font-medium text-gray-800 break-all"></p>
-                        <button id="removeFileButton" class="ml-3 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 transition-colors duration-200">
-                            ×
-                        </button>
+            </div>
+            
+            <div class="bg-white rounded-lg shadow-lg overflow-hidden border-t-4 border-oxford transition-all duration-300 hover:shadow-xl">
+                <div class="p-6">
+                    <h2 class="font-serif text-2xl text-oxford mb-4 flex items-center">
+                        <i class="fas fa-sliders-h mr-3 text-maroon"></i>
+                        Processing Options
+                    </h2>
+                    
+                    <div class="mb-4">
+                        <div class="border-l-4 border-maroon pl-4 mb-6">
+                            <h4 class="font-serif font-medium text-oxford mb-2">Structure Operations:</h4>
+                            <div class="ml-2 mb-3">
+                                <input type="checkbox" id="flattenStructure" name="processingMode" value="flattenStructure" class="w-5 h-5 text-maroon rounded focus:ring-maroon">
+                                <label for="flattenStructure" class="ml-2 text-gray-700 cursor-pointer">Move all XML files to root level</label>
+                            </div>
+                            <div class="ml-2 mb-2">
+                                <input type="checkbox" id="compressXML" name="processingMode" value="compressXML" class="w-5 h-5 text-maroon rounded focus:ring-maroon">
+                                <label for="compressXML" class="ml-2 text-gray-700 cursor-pointer">Compress XML (remove whitespace and format)</label>
+                            </div>
+                        </div>
+
+                        <div class="border-l-4 border-oxford pl-4 mb-4">
+                            <h4 class="font-serif font-medium text-oxford mb-2">Content Operations:</h4>
+                            <div class="ml-2 mb-3">
+                                <input type="checkbox" id="cleanFilenames" name="processingMode" value="cleanFilenames" class="w-5 h-5 text-maroon rounded focus:ring-maroon">
+                                <label for="cleanFilenames" class="ml-2 text-gray-700 cursor-pointer">Clean filenames (remove directory paths)</label>
+                            </div>
+                            <div class="ml-2 mb-3">
+                                <input type="checkbox" id="removeGlyphs" name="processingMode" value="removeGlyphs" class="w-5 h-5 text-maroon rounded focus:ring-maroon">
+                                <label for="removeGlyphs" class="ml-2 text-gray-700 cursor-pointer">Remove &lt;Glyph&gt; elements and children</label>
+                            </div>
+                            <div class="ml-2 mb-3">
+                                <input type="checkbox" id="removeStyles" name="processingMode" value="removeStyles" class="w-5 h-5 text-maroon rounded focus:ring-maroon">
+                                <label for="removeStyles" class="ml-2 text-gray-700 cursor-pointer">Remove style-related attributes</label>
+                            </div>
+                            <div class="ml-2 mb-2">
+                                <input type="checkbox" id="cleanWhitespace" name="processingMode" value="cleanWhitespace" class="w-5 h-5 text-maroon rounded focus:ring-maroon">
+                                <label for="cleanWhitespace" class="ml-2 text-gray-700 cursor-pointer">Clean whitespace in text content</label>
+                            </div>
+                        </div>
+                        
+                        <div id="modeError" class="text-red-500 text-sm bg-red-50 border border-red-200 rounded p-2 mt-3 hidden">
+                            <i class="fas fa-exclamation-circle mr-1"></i> Please select at least one processing mode.
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-
-        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
-            <h3 class="text-xl font-semibold text-gray-800 mb-4">Select Processing Modes:</h3>
-            
-            <div class="border-l-4 border-green-500 pl-4 mb-6">
-                <h4 class="font-medium text-gray-700 mb-2">Structure Operations:</h4>
-                <div class="ml-2 mb-2">
-                    <input type="checkbox" id="flattenStructure" name="processingMode" value="flattenStructure" class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500">
-                    <label for="flattenStructure" class="ml-2 text-gray-700 cursor-pointer">Move all XML files to root level</label>
-                </div>
-                <div class="ml-2 mb-2">
-                    <input type="checkbox" id="compressXML" name="processingMode" value="compressXML" class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500">
-                    <label for="compressXML" class="ml-2 text-gray-700 cursor-pointer">Compress XML (remove whitespace and format)</label>
-                </div>
-            </div>
-
-            <div class="border-l-4 border-blue-500 pl-4 mb-4">
-                <h4 class="font-medium text-gray-700 mb-2">Content Operations:</h4>
-                <div class="ml-2 mb-2">
-                    <input type="checkbox" id="cleanFilenames" name="processingMode" value="cleanFilenames" class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500">
-                    <label for="cleanFilenames" class="ml-2 text-gray-700 cursor-pointer">Clean filenames (remove directory paths)</label>
-                </div>
-                <div class="ml-2 mb-2">
-                    <input type="checkbox" id="removeGlyphs" name="processingMode" value="removeGlyphs" class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500">
-                    <label for="removeGlyphs" class="ml-2 text-gray-700 cursor-pointer">Remove &lt;Glyph&gt; elements and children</label>
-                </div>
-                <div class="ml-2 mb-2">
-                    <input type="checkbox" id="removeStyles" name="processingMode" value="removeStyles" class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500">
-                    <label for="removeStyles" class="ml-2 text-gray-700 cursor-pointer">Remove style-related attributes</label>
-                </div>
-                <div class="ml-2 mb-2">
-                    <input type="checkbox" id="cleanWhitespace" name="processingMode" value="cleanWhitespace" class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500">
-                    <label for="cleanWhitespace" class="ml-2 text-gray-700 cursor-pointer">Clean whitespace in text content</label>
-                </div>
-            </div>
-            
-            <div id="modeError" class="text-red-500 mt-3 hidden">Please select at least one processing mode.</div>
-        </div>
-
-        <div id="progress" class="hidden bg-white rounded-lg shadow-md p-6 mb-8">
-            <h3 class="text-xl font-semibold text-gray-800 mb-4">Processing Files...</h3>
-            <div class="w-full bg-gray-200 rounded-full h-5 mb-2 overflow-hidden">
-                <div class="progress-fill h-full bg-green-500 transition-all duration-300 ease-out w-0"></div>
-            </div>
-            <p id="status" class="text-center text-gray-600">0%</p>
-        </div>
-
-        <div class="flex justify-center gap-4 mb-8">
-            <button id="processButton" disabled class="px-6 py-3 bg-blue-500 text-white font-medium rounded-lg shadow transition-colors duration-200 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-50 disabled:opacity-50 disabled:cursor-not-allowed">
+        
+        <div class="flex flex-wrap justify-center gap-4 my-8">
+            <button id="processButton" disabled class="px-6 py-3 bg-oxford text-white font-medium rounded-md shadow transition-all duration-300 hover:bg-oxford/90 focus:outline-none focus:ring-2 focus:ring-oxford/50 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105">
                 <span class="flex items-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd" />
-                    </svg>
-                    Process ZIP File
+                    <i class="fas fa-cogs mr-2"></i>
+                    Process Archive
                 </span>
             </button>
-            <button id="downloadButton" disabled class="px-6 py-3 bg-green-500 text-white font-medium rounded-lg shadow transition-colors duration-200 hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-opacity-50 disabled:opacity-50 disabled:cursor-not-allowed">
+            <button id="downloadButton" disabled class="px-6 py-3 bg-maroon text-white font-medium rounded-md shadow transition-all duration-300 hover:bg-maroon/90 focus:outline-none focus:ring-2 focus:ring-maroon/50 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105">
                 <span class="flex items-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
-                    </svg>
-                    Download Processed ZIP
+                    <i class="fas fa-download mr-2"></i>
+                    Download Processed Archive
                 </span>
             </button>
         </div>
 
-        <div id="fileStats" class="hidden bg-white rounded-lg shadow-md p-6 mb-8">
-            <h4 class="text-lg font-semibold text-gray-800 mb-4">Processing Statistics:</h4>
+        <div id="progress" class="hidden bg-white rounded-lg shadow-lg p-6 mb-8 border-t-4 border-gold">
+            <h3 class="text-xl font-serif text-oxford mb-4 flex items-center">
+                <i class="fas fa-sync-alt fa-spin mr-3 text-maroon"></i>
+                Processing Archives...
+            </h3>
+            <div class="w-full bg-gray-200 rounded-full h-4 mb-3 overflow-hidden">
+                <div class="progress-fill h-full bg-gradient-to-r from-oxford to-maroon transition-all duration-300 ease-out w-0 pulse-animation"></div>
+            </div>
+            <div class="flex justify-between text-sm font-medium">
+                <span class="text-gray-500">Processing XML files</span>
+                <span id="status" class="text-oxford">0%</span>
+            </div>
+        </div>
+
+        <div id="fileStats" class="hidden bg-white rounded-lg shadow-lg p-6 mb-8 border-t-4 border-gold transition-all duration-500">
+            <h3 class="text-xl font-serif text-oxford mb-4 flex items-center">
+                <i class="fas fa-chart-pie mr-3 text-maroon"></i>
+                Processing Results
+            </h3>
+            
+            <div class="mb-4 grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                    <p class="text-xs text-gray-500 uppercase">Files Processed</p>
+                    <p id="filesProcessed" class="text-2xl font-medium text-oxford">-</p>
+                </div>
+                <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                    <p class="text-xs text-gray-500 uppercase">Total Size Reduction</p>
+                    <p id="totalReduction" class="text-2xl font-medium text-maroon">-</p>
+                </div>
+                <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                    <p class="text-xs text-gray-500 uppercase">Original Size</p>
+                    <p id="originalSize" class="text-2xl font-medium text-oxford">-</p>
+                </div>
+                <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                    <p class="text-xs text-gray-500 uppercase">Processed Size</p>
+                    <p id="processedSize" class="text-2xl font-medium text-oxford">-</p>
+                </div>
+            </div>
+            
             <div class="overflow-x-auto">
-                <table class="min-w-full bg-white border-collapse">
-                    <thead class="bg-gray-50 border-b">
+                <h4 class="text-lg font-serif text-oxford mb-3">File Details</h4>
+                <table class="min-w-full bg-white border-collapse rounded-lg overflow-hidden">
+                    <thead class="bg-oxford text-white">
                         <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">File</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Original Size</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Processed Size</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reduction</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">File</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Original Size</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Processed Size</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Reduction</th>
                         </tr>
                     </thead>
-                    <tbody id="statsTable">
+                    <tbody id="statsTable" class="divide-y divide-gray-200">
                         <!-- Data will be populated here -->
                     </tbody>
                 </table>
             </div>
         </div>
+        
+        <footer class="text-center text-gray-500 text-sm mt-12 pb-8">
+            <p class="mb-2">Designed for digital humanities and historical research projects</p>
+            <p><a class="text-blue-500" href="https://github.com/rayondemiel/cleanalto.github.io/blob/e0639d3de1f0aa416e1e667f0177f134270057b6/LICENSE">Licence</a> - 2025</p>
+        </footer>
     </div>
 
     <script>
@@ -136,6 +278,34 @@
         
         let selectedFile = null;
         let processedZip = null;
+
+        // Add ripple effect to buttons
+        const buttons = document.querySelectorAll('button:not([disabled])');
+        buttons.forEach(button => {
+            button.addEventListener('click', function(e) {
+                if (this.disabled) return;
+                
+                const ripple = document.createElement('span');
+                const rect = this.getBoundingClientRect();
+                
+                ripple.style.position = 'absolute';
+                ripple.style.borderRadius = '50%';
+                ripple.style.width = '50px';
+                ripple.style.height = '50px';
+                ripple.style.transform = 'scale(0)';
+                ripple.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
+                ripple.style.left = `${e.clientX - rect.left - 25}px`;
+                ripple.style.top = `${e.clientY - rect.top - 25}px`;
+                ripple.style.animation = 'ripple 0.6s linear';
+                ripple.style.pointerEvents = 'none';
+                
+                this.style.position = 'relative';
+                this.style.overflow = 'hidden';
+                this.appendChild(ripple);
+                
+                setTimeout(() => ripple.remove(), 600);
+            });
+        });
 
         // Handle checkbox changes
         document.querySelectorAll('input[name="processingMode"]').forEach(checkbox => {
@@ -172,16 +342,16 @@
         // Drag and drop handlers
         dropZone.addEventListener('dragover', (e) => {
             e.preventDefault();
-            dropZone.classList.add('bg-blue-50', 'border-blue-300');
+            dropZone.classList.add('bg-oxford/5', 'border-oxford');
         });
 
         dropZone.addEventListener('dragleave', () => {
-            dropZone.classList.remove('bg-blue-50', 'border-blue-300');
+            dropZone.classList.remove('bg-oxford/5', 'border-oxford');
         });
 
         dropZone.addEventListener('drop', (e) => {
             e.preventDefault();
-            dropZone.classList.remove('bg-blue-50', 'border-blue-300');
+            dropZone.classList.remove('bg-oxford/5', 'border-oxford');
             const file = e.dataTransfer.files[0];
             if (file && file.type === 'application/zip') {
                 handleFileSelection(file);
@@ -212,6 +382,12 @@
                 dropZoneDefault.classList.remove('flex');
                 dropZoneDefault.classList.add('hidden');
                 dropZoneFile.classList.remove('hidden');
+                
+                // Add a small animation to show success
+                dropZoneFile.classList.add('animate-pulse');
+                setTimeout(() => {
+                    dropZoneFile.classList.remove('animate-pulse');
+                }, 1000);
             }
             
             validateForm();
@@ -328,7 +504,7 @@
 
             progressDiv.classList.remove('hidden');
             const fileStats = document.getElementById('fileStats');
-            fileStats.classList.remove('hidden');
+            fileStats.classList.add('hidden');
             const statsTable = document.getElementById('statsTable');
             statsTable.innerHTML = '';
             processButton.disabled = true;
@@ -343,24 +519,28 @@
                 
                 let processed = 0;
                 const existingFiles = new Set();
+                let totalOriginalSize = 0;
+                let totalProcessedSize = 0;
 
                 for (const fileName of xmlFiles) {
                     const content = await loadedZip.file(fileName).async('text');
                     const originalSize = new Blob([content]).size;
+                    totalOriginalSize += originalSize;
                     
                     const processedContent = processXMLContent(content, selectedModes);
                     const processedSize = new Blob([processedContent]).size;
+                    totalProcessedSize += processedSize;
                     
                     // Calculate reduction percentage
                     const reduction = ((originalSize - processedSize) / originalSize * 100).toFixed(1);
                     
                     // Add statistics row
                     const row = document.createElement('tr');
-                    row.className = processed % 2 === 0 ? 'bg-white' : 'bg-gray-50';
+                    row.className = processed % 2 === 0 ? 'bg-white hover:bg-gray-50' : 'bg-gray-50 hover:bg-gray-100';
                     
                     const fileCell = document.createElement('td');
-                    fileCell.className = 'px-6 py-4 whitespace-nowrap text-sm text-gray-900';
-                    fileCell.textContent = fileName.split('/').pop();
+                    fileCell.className = 'px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900';
+                    fileCell.innerHTML = `<i class="far fa-file-code text-maroon mr-2"></i>${fileName.split('/').pop()}`;
                     
                     const originalSizeCell = document.createElement('td');
                     originalSizeCell.className = 'px-6 py-4 whitespace-nowrap text-sm text-gray-500';
@@ -371,9 +551,16 @@
                     processedSizeCell.textContent = formatBytes(processedSize);
                     
                     const reductionCell = document.createElement('td');
-                    const reductionClass = parseFloat(reduction) > 10 ? 'text-green-600 font-medium' : 'text-blue-500';
+                    let reductionClass;
+                    if (parseFloat(reduction) > 20) {
+                        reductionClass = 'text-green-600 font-medium';
+                    } else if (parseFloat(reduction) > 10) {
+                        reductionClass = 'text-blue-600 font-medium';
+                    } else {
+                        reductionClass = 'text-gray-600';
+                    }
                     reductionCell.className = `px-6 py-4 whitespace-nowrap text-sm ${reductionClass}`;
-                    reductionCell.textContent = `${reduction}%`;
+                    reductionCell.innerHTML = `<span class="px-2 py-1 rounded ${parseFloat(reduction) > 10 ? 'bg-green-100' : 'bg-blue-50'}">${reduction}%</span>`;
                     
                     row.appendChild(fileCell);
                     row.appendChild(originalSizeCell);
@@ -410,28 +597,114 @@
 
                 processedZip = await outputZip.generateAsync({type: 'blob'});
                 downloadButton.disabled = false;
+                
+                // Calculate overall stats
+                const totalReduction = ((totalOriginalSize - totalProcessedSize) / totalOriginalSize * 100).toFixed(1);
+                
+                // Update summary stats
+                document.getElementById('filesProcessed').textContent = xmlFiles.length;
+                document.getElementById('totalReduction').textContent = `${totalReduction}%`;
+                document.getElementById('originalSize').textContent = formatBytes(totalOriginalSize);
+                document.getElementById('processedSize').textContent = formatBytes(totalProcessedSize);
+                
+                // Show success animation
                 progressStatus.textContent = 'Processing complete!';
                 progressStatus.classList.add('text-green-600', 'font-medium');
+                progressBar.classList.remove('pulse-animation');
+                progressBar.classList.add('bg-green-500');
+                
+                // Show the stats with a slight delay and animation
+                setTimeout(() => {
+                    progressDiv.classList.add('opacity-0', 'transition-opacity', 'duration-500');
+                    setTimeout(() => {
+                        progressDiv.classList.add('hidden');
+                        progressDiv.classList.remove('opacity-0');
+                        fileStats.classList.remove('hidden');
+                        fileStats.classList.add('animate-fade-in');
+                    }, 500);
+                }, 1000);
 
             } catch (error) {
                 console.error('Error processing ZIP:', error);
                 progressStatus.textContent = 'Error processing file. Please try again.';
                 progressStatus.classList.add('text-red-500', 'font-medium');
+                progressBar.classList.remove('pulse-animation');
+                progressBar.classList.add('bg-red-500');
             }
         });
 
         downloadButton.addEventListener('click', () => {
             if (processedZip) {
-                const url = URL.createObjectURL(processedZip);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'processed_' + selectedFile.name;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
+                // Create visual feedback
+                downloadButton.innerHTML = '<span class="flex items-center"><i class="fas fa-circle-notch fa-spin mr-2"></i>Preparing download...</span>';
+                
+                setTimeout(() => {
+                    const url = URL.createObjectURL(processedZip);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'processed_' + selectedFile.name;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    
+                    // Reset button
+                    setTimeout(() => {
+                        downloadButton.innerHTML = '<span class="flex items-center"><i class="fas fa-download mr-2"></i>Download Processed Archive</span>';
+                    }, 1000);
+                }, 800);
             }
         });
+
+        // Add some animations and interactions for better UX
+        document.querySelectorAll('.rounded-lg').forEach(card => {
+            card.addEventListener('mouseenter', function() {
+                if (!this.classList.contains('hover:shadow-xl')) {
+                    this.classList.add('shadow-lg');
+                }
+            });
+            
+            card.addEventListener('mouseleave', function() {
+                if (!this.classList.contains('hover:shadow-xl')) {
+                    this.classList.remove('shadow-lg');
+                }
+            });
+        });
+
+        // Add keyboard accessibility
+        dropZone.setAttribute('tabindex', '0');
+        dropZone.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                fileInput.click();
+            }
+        });
+
+        // Add some CSS animations with keyframes
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes ripple {
+                to {
+                    transform: scale(4);
+                    opacity: 0;
+                }
+            }
+            
+            @keyframes fade-in {
+                from {
+                    opacity: 0;
+                    transform: translateY(10px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+            
+            .animate-fade-in {
+                animation: fade-in 0.5s ease-out forwards;
+            }
+        `;
+        document.head.appendChild(style);
     </script>
 </body>
 </html>
