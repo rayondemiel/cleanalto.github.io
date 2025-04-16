@@ -370,8 +370,9 @@
             processButton.disabled = true;
             
             try {
-                const zip = new JSZip();
-                const loadedZip = await zip.loadAsync(selectedFile);
+                const originZip = new JSZip();
+                const loadedZip = await originZip.loadAsync(selectedFile);
+                const outputZip = new JSZip();
                 
                 const xmlFiles = Object.keys(loadedZip.files)
                     .filter(name => name.toLowerCase().endsWith('.xml') && !loadedZip.files[name].dir);
@@ -396,13 +397,16 @@
                     row.insertCell(2).textContent = formatBytes(processedSize);
                     row.insertCell(3).textContent = `${reduction}%`;
 
-                    // Determine output filename
-                    let outputName = fileName;
+                    // Determine output filename and add to the new zip
+                    // When flattenStructure is selected, all XML files go to root level
                     if (selectedModes.includes('flattenStructure')) {
-                        outputName = getUniqueFilename(existingFiles, fileName);
+                        const basename = fileName.split('/').pop();
+                        const outputName = getUniqueFilename(existingFiles, basename);
+                        outputZip.file(outputName, processedContent);
+                    } else {
+                        // Keep original path
+                        outputZip.file(fileName, processedContent);
                     }
-                    
-                    zip.file(outputName, processedContent);
                     
                     processed++;
                     const progress = Math.round((processed / xmlFiles.length) * 100);
@@ -410,17 +414,16 @@
                     progressStatus.textContent = `${progress}%`;
                 }
 
-                // Copy non-XML files if not flattening
-                if (!selectedModes.includes('flattenStructure')) {
-                    for (const fileName in loadedZip.files) {
-                        if (!fileName.toLowerCase().endsWith('.xml') && !loadedZip.files[fileName].dir) {
-                            const content = await loadedZip.file(fileName).async('blob');
-                            zip.file(fileName, content);
-                        }
-                    }
+                // Copy non-XML files with their original paths (always preserve their structure)
+                const nonXmlFiles = Object.keys(loadedZip.files)
+                    .filter(name => !name.toLowerCase().endsWith('.xml') && !loadedZip.files[name].dir);
+                
+                for (const fileName of nonXmlFiles) {
+                    const content = await loadedZip.file(fileName).async('blob');
+                    outputZip.file(fileName, content);
                 }
 
-                processedZip = await zip.generateAsync({type: 'blob'});
+                processedZip = await outputZip.generateAsync({type: 'blob'});
                 downloadButton.disabled = false;
                 progressStatus.textContent = 'Processing complete!';
 
