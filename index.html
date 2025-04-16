@@ -66,6 +66,40 @@
             background-color: #cccccc;
             cursor: not-allowed;
         }
+        #dropZoneFile {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            position: relative;
+        }
+        #selectedFileName {
+            font-weight: bold;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 80%;
+            margin: 0;
+            word-break: break-all;
+        }
+        .remove-file {
+            background-color: #ff4d4d;
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            font-size: 18px;
+            line-height: 18px;
+            padding: 0;
+            margin-left: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .remove-file:hover {
+            background-color: #ff0000;
+        }
         .modes-container {
             text-align: left;
             margin: 20px 0;
@@ -125,9 +159,13 @@
     
     <div class="container">
         <div id="dropZone">
-            <div>
+            <div id="dropZoneDefault">
                 <p>Drag and drop a ZIP file here<br>or click to select</p>
                 <input type="file" id="fileInput" accept=".zip" style="display: none">
+            </div>
+            <div id="dropZoneFile" style="display: none;">
+                <p id="selectedFileName"></p>
+                <button id="removeFileButton" class="remove-file">×</button>
             </div>
         </div>
     </div>
@@ -213,6 +251,24 @@
         document.querySelectorAll('input[name="processingMode"]').forEach(checkbox => {
             checkbox.addEventListener('change', validateForm);
         });
+        
+        // Handle remove file button
+        document.getElementById('removeFileButton').addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevent triggering the dropZone click
+            selectedFile = null;
+            fileInput.value = '';
+            
+            // Reset the UI
+            document.getElementById('dropZoneDefault').style.display = 'block';
+            document.getElementById('dropZoneFile').style.display = 'none';
+            document.getElementById('selectedFileName').textContent = '';
+            document.getElementById('fileStats').style.display = 'none';
+            document.getElementById('progress').style.display = 'none';
+            
+            // Disable buttons
+            validateForm();
+            downloadButton.disabled = true;
+        });
 
         function validateForm() {
             const atLeastOneChecked = Array.from(document.querySelectorAll('input[name="processingMode"]'))
@@ -254,8 +310,24 @@
 
         function handleFileSelection(file) {
             selectedFile = file;
+            
+            // Show file name in the drop zone
+            const dropZoneDefault = document.getElementById('dropZoneDefault');
+            const dropZoneFile = document.getElementById('dropZoneFile');
+            const selectedFileName = document.getElementById('selectedFileName');
+            
+            if (file) {
+                selectedFileName.textContent = file.name;
+                dropZoneDefault.style.display = 'none';
+                dropZoneFile.style.display = 'flex';
+            }
+            
             validateForm();
             downloadButton.disabled = true;
+            
+            // Reset the file stats display when a new file is selected
+            document.getElementById('fileStats').style.display = 'none';
+            document.getElementById('progress').style.display = 'none';
         }
 
         function formatBytes(bytes) {
