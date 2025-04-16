@@ -5,233 +5,123 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ZIP File ALTO Cleaner</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <style>
-        /* Previous styles remain the same */
-        body {
-            font-family: system-ui, -apple-system, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            line-height: 1.6;
-        }
-        .container {
-            border: 2px dashed #ccc;
-            border-radius: 8px;
-            padding: 20px;
-            text-align: center;
-            margin: 20px 0;
-        }
-        #dropZone {
-            min-height: 200px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-        }
-        #dropZone.dragover {
-            background-color: #e9ecef;
-            border-color: #666;
-        }
-        #progress {
-            display: none;
-            margin: 20px 0;
-        }
-        .progress-bar {
-            width: 100%;
-            height: 20px;
-            background-color: #f0f0f0;
-            border-radius: 10px;
-            overflow: hidden;
-        }
-        .progress-fill {
-            height: 100%;
-            background-color: #4CAF50;
-            width: 0%;
-            transition: width 0.3s ease;
-        }
-        button {
-            background-color: #2c89b4;
-            color: white;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
-            margin: 10px;
-        }
-        #downloadButton {
-            background-color: #4CAF50;
-        }
-        button:disabled {
-            background-color: #cccccc;
-            cursor: not-allowed;
-        }
-        #dropZoneFile {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 100%;
-            position: relative;
-        }
-        #selectedFileName {
-            font-weight: bold;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            max-width: 80%;
-            margin: 0;
-            word-break: break-all;
-        }
-        .remove-file {
-            background-color: #ff4d4d;
-            color: white;
-            border-radius: 50%;
-            width: 24px;
-            height: 24px;
-            font-size: 18px;
-            line-height: 18px;
-            padding: 0;
-            margin-left: 15px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-        .remove-file:hover {
-            background-color: #ff0000;
-        }
-        .modes-container {
-            text-align: left;
-            margin: 20px 0;
-            padding: 20px;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-        }
-        .mode-option {
-            margin: 10px 0;
-        }
-        .mode-option label {
-            margin-left: 8px;
-            cursor: pointer;
-        }
-        .error-message {
-            color: #ff0000;
-            margin: 10px 0;
-            display: none;
-        }
-        .mode-group {
-            border-left: 3px solid #4CAF50;
-            padding-left: 15px;
-            margin: 20px 0;
-        }
-        .mode-group h4 {
-            margin: 0 0 10px 0;
-            color: #333;
-        }
-        .file-stats {
-            margin: 10px 0;
-            padding: 10px;
-            background-color: #f5f5f5;
-            border-radius: 4px;
-            display: none;
-        }
-        .file-stats table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        .file-stats th, .file-stats td {
-            padding: 8px;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
-        }
-        .compression-info {
-            color: #4CAF50;
-            font-weight: bold;
-        }
-        .size-reduction {
-            color: #2196F3;
-        }
-    </style>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-    <h1>ZIP File ALTO Cleaner</h1>
-    <p>Upload a ZIP file containing XML files and select processing modes to clean up.</p>
-    
-    <div class="container">
-        <div id="dropZone">
-            <div id="dropZoneDefault">
-                <p>Drag and drop a ZIP file here<br>or click to select</p>
-                <input type="file" id="fileInput" accept=".zip" style="display: none">
-            </div>
-            <div id="dropZoneFile" style="display: none;">
-                <p id="selectedFileName"></p>
-                <button id="removeFileButton" class="remove-file">×</button>
-            </div>
-        </div>
-    </div>
-
-    <div class="modes-container">
-        <h3>Select Processing Modes:</h3>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-3xl">
+        <header class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">ZIP File ALTO Cleaner</h1>
+            <p class="text-gray-600">Upload a ZIP file containing XML files and select processing modes to clean up.</p>
+        </header>
         
-        <div class="mode-group">
-            <h4>Structure Operations:</h4>
-            <div class="mode-option">
-                <input type="checkbox" id="flattenStructure" name="processingMode" value="flattenStructure">
-                <label for="flattenStructure">Move all XML files to root level</label>
-            </div>
-            <div class="mode-option">
-                <input type="checkbox" id="compressXML" name="processingMode" value="compressXML">
-                <label for="compressXML">Compress XML (remove whitespace and format)</label>
-            </div>
-        </div>
-
-        <div class="mode-group">
-            <h4>Content Operations:</h4>
-            <div class="mode-option">
-                <input type="checkbox" id="cleanFilenames" name="processingMode" value="cleanFilenames">
-                <label for="cleanFilenames">Clean filenames (remove directory paths)</label>
-            </div>
-            <div class="mode-option">
-                <input type="checkbox" id="removeGlyphs" name="processingMode" value="removeGlyphs">
-                <label for="removeGlyphs">Remove &lt;Glyph&gt; elements and children</label>
-            </div>
-            <div class="mode-option">
-                <input type="checkbox" id="removeStyles" name="processingMode" value="removeStyles">
-                <label for="removeStyles">Remove style-related attributes</label>
-            </div>
-            <div class="mode-option">
-                <input type="checkbox" id="cleanWhitespace" name="processingMode" value="cleanWhitespace">
-                <label for="cleanWhitespace">Clean whitespace in text content</label>
+        <div class="bg-white rounded-lg shadow-md overflow-hidden mb-8">
+            <div id="dropZone" class="border-2 border-dashed border-gray-300 rounded-lg p-8 transition-colors duration-200 cursor-pointer">
+                <div id="dropZoneDefault" class="flex flex-col items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-blue-500 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    </svg>
+                    <p class="text-gray-600 text-center">
+                        Drag and drop a ZIP file here<br>or click to select
+                    </p>
+                    <input type="file" id="fileInput" accept=".zip" class="hidden">
+                </div>
+                <div id="dropZoneFile" class="hidden">
+                    <div class="flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-blue-500 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <p id="selectedFileName" class="font-medium text-gray-800 break-all"></p>
+                        <button id="removeFileButton" class="ml-3 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 transition-colors duration-200">
+                            ×
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
-        
-        <div id="modeError" class="error-message">Please select at least one processing mode.</div>
-    </div>
 
-    <div id="progress">
-        <h3>Processing Files...</h3>
-        <div class="progress-bar">
-            <div class="progress-fill"></div>
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <h3 class="text-xl font-semibold text-gray-800 mb-4">Select Processing Modes:</h3>
+            
+            <div class="border-l-4 border-green-500 pl-4 mb-6">
+                <h4 class="font-medium text-gray-700 mb-2">Structure Operations:</h4>
+                <div class="ml-2 mb-2">
+                    <input type="checkbox" id="flattenStructure" name="processingMode" value="flattenStructure" class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500">
+                    <label for="flattenStructure" class="ml-2 text-gray-700 cursor-pointer">Move all XML files to root level</label>
+                </div>
+                <div class="ml-2 mb-2">
+                    <input type="checkbox" id="compressXML" name="processingMode" value="compressXML" class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500">
+                    <label for="compressXML" class="ml-2 text-gray-700 cursor-pointer">Compress XML (remove whitespace and format)</label>
+                </div>
+            </div>
+
+            <div class="border-l-4 border-blue-500 pl-4 mb-4">
+                <h4 class="font-medium text-gray-700 mb-2">Content Operations:</h4>
+                <div class="ml-2 mb-2">
+                    <input type="checkbox" id="cleanFilenames" name="processingMode" value="cleanFilenames" class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500">
+                    <label for="cleanFilenames" class="ml-2 text-gray-700 cursor-pointer">Clean filenames (remove directory paths)</label>
+                </div>
+                <div class="ml-2 mb-2">
+                    <input type="checkbox" id="removeGlyphs" name="processingMode" value="removeGlyphs" class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500">
+                    <label for="removeGlyphs" class="ml-2 text-gray-700 cursor-pointer">Remove &lt;Glyph&gt; elements and children</label>
+                </div>
+                <div class="ml-2 mb-2">
+                    <input type="checkbox" id="removeStyles" name="processingMode" value="removeStyles" class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500">
+                    <label for="removeStyles" class="ml-2 text-gray-700 cursor-pointer">Remove style-related attributes</label>
+                </div>
+                <div class="ml-2 mb-2">
+                    <input type="checkbox" id="cleanWhitespace" name="processingMode" value="cleanWhitespace" class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500">
+                    <label for="cleanWhitespace" class="ml-2 text-gray-700 cursor-pointer">Clean whitespace in text content</label>
+                </div>
+            </div>
+            
+            <div id="modeError" class="text-red-500 mt-3 hidden">Please select at least one processing mode.</div>
         </div>
-        <p id="status">0%</p>
-    </div>
 
-    <button id="processButton" disabled>Process ZIP File</button>
-    <button id="downloadButton" disabled>Download Processed ZIP</button>
+        <div id="progress" class="hidden bg-white rounded-lg shadow-md p-6 mb-8">
+            <h3 class="text-xl font-semibold text-gray-800 mb-4">Processing Files...</h3>
+            <div class="w-full bg-gray-200 rounded-full h-5 mb-2 overflow-hidden">
+                <div class="progress-fill h-full bg-green-500 transition-all duration-300 ease-out w-0"></div>
+            </div>
+            <p id="status" class="text-center text-gray-600">0%</p>
+        </div>
 
-    <div id="fileStats" class="file-stats">
-        <h4>Processing Statistics:</h4>
-        <table id="statsTable">
-            <thead>
-                <tr>
-                    <th>File</th>
-                    <th>Original Size</th>
-                    <th>Processed Size</th>
-                    <th>Reduction</th>
-                </tr>
-            </thead>
-            <tbody></tbody>
-        </table>
+        <div class="flex justify-center gap-4 mb-8">
+            <button id="processButton" disabled class="px-6 py-3 bg-blue-500 text-white font-medium rounded-lg shadow transition-colors duration-200 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                <span class="flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd" />
+                    </svg>
+                    Process ZIP File
+                </span>
+            </button>
+            <button id="downloadButton" disabled class="px-6 py-3 bg-green-500 text-white font-medium rounded-lg shadow transition-colors duration-200 hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-opacity-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                <span class="flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+                    </svg>
+                    Download Processed ZIP
+                </span>
+            </button>
+        </div>
+
+        <div id="fileStats" class="hidden bg-white rounded-lg shadow-md p-6 mb-8">
+            <h4 class="text-lg font-semibold text-gray-800 mb-4">Processing Statistics:</h4>
+            <div class="overflow-x-auto">
+                <table class="min-w-full bg-white border-collapse">
+                    <thead class="bg-gray-50 border-b">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">File</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Original Size</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Processed Size</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reduction</th>
+                        </tr>
+                    </thead>
+                    <tbody id="statsTable">
+                        <!-- Data will be populated here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -259,11 +149,12 @@
             fileInput.value = '';
             
             // Reset the UI
-            document.getElementById('dropZoneDefault').style.display = 'block';
-            document.getElementById('dropZoneFile').style.display = 'none';
+            document.getElementById('dropZoneDefault').classList.remove('hidden');
+            document.getElementById('dropZoneDefault').classList.add('flex');
+            document.getElementById('dropZoneFile').classList.add('hidden');
             document.getElementById('selectedFileName').textContent = '';
-            document.getElementById('fileStats').style.display = 'none';
-            document.getElementById('progress').style.display = 'none';
+            document.getElementById('fileStats').classList.add('hidden');
+            document.getElementById('progress').classList.add('hidden');
             
             // Disable buttons
             validateForm();
@@ -275,22 +166,22 @@
                 .some(checkbox => checkbox.checked);
             
             processButton.disabled = !selectedFile || !atLeastOneChecked;
-            modeError.style.display = atLeastOneChecked ? 'none' : 'block';
+            modeError.classList.toggle('hidden', atLeastOneChecked);
         }
 
-        // Drag and drop handlers remain the same
+        // Drag and drop handlers
         dropZone.addEventListener('dragover', (e) => {
             e.preventDefault();
-            dropZone.classList.add('dragover');
+            dropZone.classList.add('bg-blue-50', 'border-blue-300');
         });
 
         dropZone.addEventListener('dragleave', () => {
-            dropZone.classList.remove('dragover');
+            dropZone.classList.remove('bg-blue-50', 'border-blue-300');
         });
 
         dropZone.addEventListener('drop', (e) => {
             e.preventDefault();
-            dropZone.classList.remove('dragover');
+            dropZone.classList.remove('bg-blue-50', 'border-blue-300');
             const file = e.dataTransfer.files[0];
             if (file && file.type === 'application/zip') {
                 handleFileSelection(file);
@@ -318,16 +209,17 @@
             
             if (file) {
                 selectedFileName.textContent = file.name;
-                dropZoneDefault.style.display = 'none';
-                dropZoneFile.style.display = 'flex';
+                dropZoneDefault.classList.remove('flex');
+                dropZoneDefault.classList.add('hidden');
+                dropZoneFile.classList.remove('hidden');
             }
             
             validateForm();
             downloadButton.disabled = true;
             
             // Reset the file stats display when a new file is selected
-            document.getElementById('fileStats').style.display = 'none';
-            document.getElementById('progress').style.display = 'none';
+            document.getElementById('fileStats').classList.add('hidden');
+            document.getElementById('progress').classList.add('hidden');
         }
 
         function formatBytes(bytes) {
@@ -430,14 +322,14 @@
                 .map(checkbox => checkbox.value);
 
             if (selectedModes.length === 0) {
-                modeError.style.display = 'block';
+                modeError.classList.remove('hidden');
                 return;
             }
 
-            progressDiv.style.display = 'block';
+            progressDiv.classList.remove('hidden');
             const fileStats = document.getElementById('fileStats');
-            fileStats.style.display = 'block';
-            const statsTable = document.getElementById('statsTable').getElementsByTagName('tbody')[0];
+            fileStats.classList.remove('hidden');
+            const statsTable = document.getElementById('statsTable');
             statsTable.innerHTML = '';
             processButton.disabled = true;
             
@@ -463,11 +355,32 @@
                     const reduction = ((originalSize - processedSize) / originalSize * 100).toFixed(1);
                     
                     // Add statistics row
-                    const row = statsTable.insertRow();
-                    row.insertCell(0).textContent = fileName.split('/').pop();
-                    row.insertCell(1).textContent = formatBytes(originalSize);
-                    row.insertCell(2).textContent = formatBytes(processedSize);
-                    row.insertCell(3).textContent = `${reduction}%`;
+                    const row = document.createElement('tr');
+                    row.className = processed % 2 === 0 ? 'bg-white' : 'bg-gray-50';
+                    
+                    const fileCell = document.createElement('td');
+                    fileCell.className = 'px-6 py-4 whitespace-nowrap text-sm text-gray-900';
+                    fileCell.textContent = fileName.split('/').pop();
+                    
+                    const originalSizeCell = document.createElement('td');
+                    originalSizeCell.className = 'px-6 py-4 whitespace-nowrap text-sm text-gray-500';
+                    originalSizeCell.textContent = formatBytes(originalSize);
+                    
+                    const processedSizeCell = document.createElement('td');
+                    processedSizeCell.className = 'px-6 py-4 whitespace-nowrap text-sm text-gray-500';
+                    processedSizeCell.textContent = formatBytes(processedSize);
+                    
+                    const reductionCell = document.createElement('td');
+                    const reductionClass = parseFloat(reduction) > 10 ? 'text-green-600 font-medium' : 'text-blue-500';
+                    reductionCell.className = `px-6 py-4 whitespace-nowrap text-sm ${reductionClass}`;
+                    reductionCell.textContent = `${reduction}%`;
+                    
+                    row.appendChild(fileCell);
+                    row.appendChild(originalSizeCell);
+                    row.appendChild(processedSizeCell);
+                    row.appendChild(reductionCell);
+                    
+                    statsTable.appendChild(row);
 
                     // Determine output filename and add to the new zip
                     // When flattenStructure is selected, all XML files go to root level
@@ -498,10 +411,12 @@
                 processedZip = await outputZip.generateAsync({type: 'blob'});
                 downloadButton.disabled = false;
                 progressStatus.textContent = 'Processing complete!';
+                progressStatus.classList.add('text-green-600', 'font-medium');
 
             } catch (error) {
                 console.error('Error processing ZIP:', error);
                 progressStatus.textContent = 'Error processing file. Please try again.';
+                progressStatus.classList.add('text-red-500', 'font-medium');
             }
         });
 
